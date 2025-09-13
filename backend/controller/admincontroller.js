@@ -1,8 +1,7 @@
 const db = require("../config/db");
 
-// ======================
+
 // Dashboard Stats
-// ======================
 exports.getDashboardStats = async (req, res) => {
   try {
     const [users] = await db.query("SELECT COUNT(*) AS total FROM users");
@@ -20,9 +19,9 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
-// ======================
+
 // Add New User (Admin can add Admin/User/Store Owner)
-// ======================
+
 exports.createUser = async (req, res) => {
   try {
     const { name, email, password, address, role } = req.body;
