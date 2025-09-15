@@ -1,19 +1,34 @@
-const { DataTypes } = require("sequelize");
-const sequelize = require("../config/db");
-const User = require("./user");
-const Store = require("./store");
+const db = require("../config/databse");
 
-const Rating = sequelize.define("Rating", {
-  rating: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    validate: { min: 1, max: 5 },
-  },
-});
+// Insert or update rating
+const upsertRating = async (userId, storeId, rating) => {
+  const [existing] = await db.query(
+    "SELECT * FROM ratings WHERE user_id = ? AND store_id = ?",
+    [userId, storeId]
+  );
 
-User.hasMany(Rating, { foreignKey: "userId" });
-Store.hasMany(Rating, { foreignKey: "storeId" });
-Rating.belongsTo(User, { foreignKey: "userId" });
-Rating.belongsTo(Store, { foreignKey: "storeId" });
+  if (existing.length > 0) {
+    await db.query(
+      "UPDATE ratings SET rating = ? WHERE user_id = ? AND store_id = ?",
+      [rating, userId, storeId]
+    );
+    return { ...existing[0], rating };
+  }
 
-module.exports = Rating;
+  const [result] = await db.query(
+    "INSERT INTO ratings (user_id, store_id, rating) VALUES (?, ?, ?)",
+    [userId, storeId, rating]
+  );
+
+  return { id: result.insertId, userId, storeId, rating };
+};
+
+// Get ratings for a store
+const getRatingsByStore = async (storeId) => {
+  const [rows] = await db.query("SELECT * FROM ratings WHERE store_id = ?", [
+    storeId,
+  ]);
+  return rows;
+};
+
+module.exports = { upsertRating, getRatingsByStore };
