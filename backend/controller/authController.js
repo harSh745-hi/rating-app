@@ -1,24 +1,47 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const db = require("../config/db");
+const User = require("../models/user");
 
 // Register
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, address } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ msg: "All fields required" });
+    const { name, email, password, address, role } = req.body;
+
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ msg: "All fields including role are required" });
     }
 
+    const validRoles = ["ADMIN", "USER", "OWNER"];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ msg: "Invalid role" });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ msg: "Invalid email format" });
+    }
+
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        msg: "Password must be at least 8 characters, include uppercase, lowercase, numbers and special character",
+      });
+    }
+
+    // Check if email exists
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+      return res.status(400).json({ msg: "Email already registered" });
+    }
+
+    // Create user
     const hashedPassword = await bcrypt.hash(password, 10);
-    await db.query(
-      "INSERT INTO users (name, email, password, address, role) VALUES (?, ?, ?, ?, 'USER')",
-      [name, email, hashedPassword, address]
-    );
+    await User.createUser(name, email, hashedPassword, address, role);
 
     res.status(201).json({ msg: "User registered successfully" });
   } catch (err) {
-    console.error(err);
+    console.error("Register Error:", err);
     res.status(500).json({ msg: "Server error" });
   }
 };
@@ -28,27 +51,25 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const [user] = await db.query("SELECT * FROM users WHERE email = ?", [
-      email,
-    ]);
-    if (user.length === 0) {
+    const user = await User.findByEmail(email);
+    if (!user) {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
 
-    const validPass = await bcrypt.compare(password, user[0].password);
+    const validPass = await bcrypt.compare(password, user.password);
     if (!validPass) {
       return res.status(400).json({ msg: "Invalid credentials" });
     }
 
     const token = jwt.sign(
-      { id: user[0].id, role: user[0].role },
+      { id: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "2d" }
     );
 
-    res.json({ token, role: user[0].role });
+    res.json({ token, role: user.role });
   } catch (err) {
-    console.error(err);
+    console.error("Login Error:", err);
     res.status(500).json({ msg: "Server error" });
   }
 };
