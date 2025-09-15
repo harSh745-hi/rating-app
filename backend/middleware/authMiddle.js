@@ -10,6 +10,18 @@ const authMiddleware = (req, res, next) => {
     req.user = user;
     next();
   });
+}
+
+const verifyAdmin = (req, res, next) => {
+  authMiddleware(req, res, () => {
+    if (req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Admins only" });
+    }
+    next();
+  });
 };
 
-module.exports = authMiddleware;
+module.exports = {authMiddleware,verifyAdmin};
+
+
+
