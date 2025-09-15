@@ -1,16 +1,24 @@
 const Rating = require("../models/rating");
 
 exports.rateStore = async (req, res) => {
-  const { rating } = req.body;
-  const { id } = req.params; // storeId
-  const userId = req.user.id;
+  try {
+    const { rating } = req.body;
+    const storeId = req.params.id;
+    const userId = req.user.id;
 
-  let existing = await Rating.findOne({ where: { userId, storeId: id } });
-  if (existing) {
-    existing.rating = rating;
-    await existing.save();
-    return res.json(existing);
+    // Check if user already rated this store
+    const existing = await Rating.findUserRating(userId, storeId);
+
+    if (existing) {
+      await Rating.updateRating(rating, userId, storeId);
+      return res.json({ msg: "Rating updated", rating });
+    }
+
+    // Insert new rating
+    const newRating = await Rating.insertRating(rating, userId, storeId);
+    res.json(newRating);
+  } catch (err) {
+    console.error("RateStore Error:", err);
+    res.status(500).json({ msg: "Server error" });
   }
-  const newRating = await Rating.create({ rating, storeId: id, userId });
-  res.json(newRating);
 };
