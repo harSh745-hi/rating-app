@@ -1,7 +1,8 @@
-const db = require("../config/db");
+const db = require("../config/databse");
 
 
 // Dashboard Stats
+
 exports.getDashboardStats = async (req, res) => {
   try {
     const [users] = await db.query("SELECT COUNT(*) AS total FROM users");
@@ -29,6 +30,12 @@ exports.createUser = async (req, res) => {
       return res.status(400).json({ msg: "All fields required" });
     }
 
+    const validRoles = ["ADMIN", "USER", "OWNER"];
+    
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ msg: "Invalid role" });
+    }
+
     // Hash password
     const bcrypt = require("bcryptjs");
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -45,9 +52,9 @@ exports.createUser = async (req, res) => {
   }
 };
 
-// ======================
+
 // Get All Users (with filters)
-// ======================
+
 exports.getUsers = async (req, res) => {
   try {
     const { name, email, address, role } = req.query;
@@ -79,9 +86,9 @@ exports.getUsers = async (req, res) => {
   }
 };
 
-// ======================
+
 // Get All Stores (with avg rating)
-// ======================
+
 exports.getStores = async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -98,9 +105,9 @@ exports.getStores = async (req, res) => {
   }
 };
 
-// ======================
-// Get User Details (extra info for Store Owner)
-// ======================
+
+// Get User Details 
+
 exports.getUserDetails = async (req, res) => {
   try {
     const { id } = req.params;
