@@ -1,10 +1,14 @@
 const express = require("express");
-const { getStores } = require("../controllers/storeController");
-const { rateStore } = require("../controllers/ratingController");
-const auth = require("../middlewares/authMiddleware");
 const router = express.Router();
 
-router.get("/", getStores);
-router.post("/:id/rate", auth, rateStore);
+const { getStoresWithAvgRating } = require("../controller/storeController");
+const { rateStore } = require("../controller/ratingController");
+const { authMiddleware } = require("../middleware/authMiddle");
+
+// anyone can see stores with average rating
+router.get("/", getStoresWithAvgRating);
+
+// only logged-in users can rate
+router.post("/:id/rate", authMiddleware, rateStore);
 
 module.exports = router;
